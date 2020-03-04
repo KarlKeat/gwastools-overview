@@ -1,0 +1,114 @@
+---
+title: "GWASTools"
+author: "Karl Keat"
+date: "March 4, 2020"
+output: 
+  html_document:
+    toc: true
+    toc_float:
+      collapsed: false
+    theme: united 
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Overview
+
+### Introduction
+GWASTools is a package in the Bioconductor set of R packages and is developed and maintained by researchers at the Department of Biostatistics of the University of Washington [[1]](#sources). It was first added to Bioconductor in November 2011, with the release of Bioconductor 2.9 [[2]](#sources). 
+
+### GWAS
+GWASTools is a package for performing Genome-Wide Association Studies (GWAS) in R. A GWAS is a type of study that aims to identify associations between genetic variants and complex traits [[3]](#sources). A complex trait is a trait that is mediated by multiple genes and their interactions with the environment. Height is a classic example of a complex trait, but GWAS is also valuable for understanding complex diseases like Alzheimer’s, Crohn’s Disease, and cardiovascular disease. Associations are found by testing for statistically significant differences in allele frequency between the population of cases and controls. That is, it runs statistical tests on millions of sites in the genome to test if there is a difference in the frequencies of different "versions" of each gene between patients with or without a disease.
+
+### NetCDF and GDS File Formats
+In order to study genetic associations with enough statistical power, researchers need to look at hundreds or even thousands of genomes with millions of datapoints per genome. Since such large, high-dimensional datasets are difficult to work with in R, where data generally needs to be loaded into virtual memory, GWASTools takes in data either in the open source NetCDF file format, or the Genomics Data Structure (GDS) format which allow for rapid access to large subsets of the data without loading it all into virtual memory [[1,4]](#sources). 
+
+### Basic Functionality
+GWASTools is geared towards quality control, data cleaning, and analysis of GWAS data. In their 2012 paper on the package, the authors listed the following common functions [[1]](#sources):
+
+*	Creating NetCDF and GDS files from raw microarray/genomic data
+* Calculate statistics such as allele frequency, missing call rate, and heterozygosity
+* Evaluate batch quality by looking for disparities in statistics between data batches
+* Detect chromosomal abnormalities in individuals
+* Estimate the relatedness between individuals and their pedigree relationship
+* Perform association regression and survival model approaches
+* Generate multiple types of relevant plots
+
+### Updates and Versions
+As of March 1, 2020, GWASTools is on version 1.32. A browse through the patch notes seems to indicate that although the package has been receiving consistent updates since its original release, most of the changes have been bugfixes, quality of life changes, and performance improvements [[5]](#sources). 
+
+## Usage Examples
+
+Adapted and simplified from the GWASTools documentation [[6]](#sources)
+
+### Calculate allele frequency for a set of scans
+
+The allele frequency represents the proportion of times you see a specific nucleotide base at a given site compared to the alternatives. It can tell you how common or rare a specific genotype is at the population level.
+
+```{r eval=FALSE}
+gds_object <- GdsGenotypeReader("illumina_input.gds") # Load in the GDS file
+illumina_scan_annotations <- ScanAnnotationDataFrame(illumina_annotation_df) # Generate an annotation data frame
+
+# Need to include scan annotations in order to determine subject sex
+genotype_data <- GenotypeData(gds_object, scanAnnot=illumina_scan_annotations) 
+
+allele_freq <- alleleFrequency(genotype_data)
+```
+
+### Perform a linear regression association test on a set of scans
+
+```{r eval=FALSE}
+# Load the data
+gds_object <- GdsGenotypeReader("illumina_input.gds")
+illumina_scan_annotations <- ScanAnnotationDataFrame(illumina_annotation_df) 
+genotype_data <- GenotypeData(gds_object, scanAnnot=illumina_scan_annotations) 
+
+# Outputs a dataframe containing regression statistics, SNP association p-values, and more
+results <- assocRegression(genotype_data, outcome="alzheimers", model.type="linear")
+```
+
+### Generate a Manhattan Plot
+
+A manhattan plot shows the -log10(p) values for each SNP, labeled by chromosome. It allows for easy identification of highly significant SNPs by looking for points far above the significance threshold, signifying large -log10(p) values (extremely low p-values). Such large values are necessary due to the need to minimize the false discovery rate when performing millions of significance tests. Here is an example of a manhattan plot [[7]](#sources):
+
+![](https://upload.wikimedia.org/wikipedia/commons/1/12/Manhattan_Plot.png)
+
+
+```{r eval=FALSE}
+# Start with results from an association test
+pvals <- results$Wald.pval # Extract the list of SNP p-values
+chromosome <- results$chr # Extract the chromosome corresponding to each SNP
+manhattanPlot(pvals, chromosome)
+```
+
+## Similar Packages
+
+### [gwasurvivr](http://bioconductor.org/packages/release/bioc/html/gwasurvivr.html)
+
+A bioconductor package for performing survival analysis of imputed genomic data.
+
+### [GENESIS](https://bioconductor.org/packages/release/bioc/html/GENESIS.html)
+
+A bioconductor package for estimating and controlling for population structure in SNP data. 
+
+### [bigsnpr](https://privefl.github.io/bigsnpr/)
+
+A package for SNP array analysis, designed to streamline and combine the functionality of many tools.
+
+## Reflection
+Although this package appears to be feature-rich and suited to the task of performing a GWAS, its functionality is replicated by other standalone programs, many of which are much more widely used. The GWASTools paper has only been cited 100 times, with many of the citations coming from papers about competing tools or pipelines that make use of GWASTools. For comparison, one of the most popular GWAS software packages, PLINK, has been cited over 19,000 times. Still, the vast majority of the papers that cited GWASTools used this package to perform a GWAS and it seems to fill a niche for those who are familiar with or more comfortable working within the R ecosystem. Additionally, the ability to generate plots directly in R using the package is significantly more convenient than having to take the outputs from a software package, import them into R, and then generate plots from that. Overall, it seems to be an effective way to conduct a GWAS without demanding too much bioinformatics expertise, making it a good entry point for less experienced researchers, or for those who want to do all of their analysis in R.
+
+<a id="sources"></a>
+
+## Sources
+
+1.	https://www.ncbi.nlm.nih.gov/pmc/articles/PMC3519456/
+2.	https://bioconductor.org/news/bioc_2_9_release/ 
+3.	https://www.nature.com/articles/s41576-019-0127-1 
+4.	https://www.bioconductor.org/packages/devel/bioc/vignettes/GWASTools/inst/doc/Formats.pdf 
+5.	https://bioconductor.org/packages/release/bioc/news/GWASTools/NEWS 
+6.  http://www.bioconductor.org/packages/release/bioc/manuals/GWASTools/man/GWASTools.pdf 
+7.  https://en.wikipedia.org/wiki/Manhattan_plot#/media/File:Manhattan_Plot.png 
+
